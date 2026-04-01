@@ -1,13 +1,21 @@
 import datetime
 import os
+from pprint import pprint
+import dotenv
+
 
 from langchain.agents import create_agent
 from langchain.agents.middleware import wrap_tool_call
+from langchain_core.documents import Document
 from langchain_core.messages import SystemMessage, HumanMessage, ToolMessage
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_ollama import ChatOllama
 from langchain.tools import tool
+from langchain_text_splitters import CharacterTextSplitter
 
+model = "qwen2.5:1.5b"
+
+dotenv.load_dotenv(".env.local")
 
 @tool
 def get_weather(city: str) -> str:
@@ -37,11 +45,19 @@ def tool_exception(request, handler):
         )
 
 
-def main():
-    llm = ChatOllama(model="qwen2.5:1.5b")
-    llm.temperature = 0.2
+def run_doc(doc: list[Document]):
+    doc_text = ""
+    for (i, page) in enumerate(doc):
+        doc_text += f"page {i}\n"
+        doc_text += page.page_content + "\n"
 
-    the_agent = create_agent(
+    llm = ChatOllama(
+        model=model,
+        base_url=str(os.getenv("OLLAMA_BASE_URL")),
+        temperature=0.2
+    )
+
+    legal_eval_agent = create_agent(
         model=llm,
         name="sailor",
         tools=[get_weather, get_date_time],
@@ -49,25 +65,33 @@ def main():
     )
 
     messages = [
-        SystemMessage("You are a helpful assistant. Use tools if needed, and respond like you're Donald Trump!"),
-        HumanMessage("What's the weather at BJ?"),
+        SystemMessage("Read the legal material provided by the user."
+                      "List six inherent weaknesses or risks."
+                      "Respond in the same language used in the material."),
+        HumanMessage("The legal material:\n\n" + doc_text),
     ]
 
-    result = the_agent.invoke(
-        input = { "messages": messages },
-    )
-
+    result = legal_eval_agent.invoke({ "messages": messages })
     messages = result["messages"]
-    messages.append(SystemMessage("Reflect on your conclusion and improve if necessary."))
 
-    result = the_agent.invoke(
-        input = { "messages": messages },
-    )
+    messages.append(SystemMessage("Reflect and criticize your analysis: what may be some details that you missed?"))
 
+    result = legal_eval_agent.invoke({ "messages": messages })
+    messages = result["messages"]
+
+    messages.append(SystemMessage("Based on your reflection, rewrite an improved version of your evaluation of the user's material."))
+
+    result = legal_eval_agent.invoke({ "messages": messages })
     messages = result["messages"]
 
     for message in messages:
         message.pretty_print()
+
+
+def main():
+    pdf = PyPDFLoader("res/thebodyshop.pdf")
+    doc = pdf.load()
+    run_doc(doc)
 
 
 if __name__ == "__main__":
