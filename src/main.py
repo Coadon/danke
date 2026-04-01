@@ -66,7 +66,8 @@ def run_doc(doc: list[Document]):
 
     messages = [
         SystemMessage("Read the legal material provided by the user."
-                      "List six inherent weaknesses or risks."
+                      "Some information may be irrelevant."
+                      "LIST SIX INHERENT WEAKNESSES OR RISKS."
                       "Respond in the same language used in the material."),
         HumanMessage("The legal material:\n\n" + doc_text),
     ]
