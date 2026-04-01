@@ -48,7 +48,7 @@ def tool_exception(request, handler):
 def run_doc(doc: list[Document]):
     doc_text = ""
     for (i, page) in enumerate(doc):
-        doc_text += f"page {i}\n"
+        doc_text += f"\npage {i+1}\n"
         doc_text += page.page_content + "\n"
 
     llm = ChatOllama(
@@ -65,9 +65,9 @@ def run_doc(doc: list[Document]):
     )
 
     messages = [
-        SystemMessage("Read the legal material provided by the user."
-                      "Some information may be irrelevant."
-                      "LIST SIX INHERENT WEAKNESSES OR RISKS."
+        SystemMessage("Read the legal material provided by the user.\n"
+                      "Some information may be irrelevant.\n"
+                      "LIST SIX INHERENT WEAKNESSES OR RISKS.\n"
                       "Respond in the same language used in the material."),
         HumanMessage("The legal material:\n\n" + doc_text),
     ]
